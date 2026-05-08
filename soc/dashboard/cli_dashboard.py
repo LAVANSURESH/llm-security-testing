@@ -1,18 +1,15 @@
 """Rich CLI dashboard for the AI SOC application."""
 
-import sys
 from datetime import datetime
-from typing import List, Optional
+from typing import Optional
 
 try:
     from rich.console import Console
     from rich.table import Table
     from rich.panel import Panel
     from rich.text import Text
-    from rich.columns import Columns
     from rich.rule import Rule
     from rich.markdown import Markdown
-    from rich.progress import Progress, SpinnerColumn, TextColumn
     from rich import box
     RICH_AVAILABLE = True
 except ImportError:
@@ -26,20 +23,31 @@ PRIORITY_COLORS = {"P1": "bold red", "P2": "red", "P3": "yellow", "P4": "green"}
 SEVERITY_COLORS = {"critical": "bold red", "high": "red", "medium": "yellow", "low": "green"}
 STATUS_COLORS = {"open": "red", "investigating": "yellow", "contained": "blue", "resolved": "green"}
 
+PROVIDER_LABELS = {
+    "gemini": ("Google Gemini", "green"),
+    "anthropic": ("Anthropic Claude", "cyan"),
+    "openai": ("OpenAI GPT", "bright_green"),
+}
 
-def print_banner():
+
+def print_banner(provider: str = "anthropic", model: str = "claude-sonnet-4-6"):
+    provider_name, provider_color = PROVIDER_LABELS.get(provider, (provider, "white"))
+
     if not RICH_AVAILABLE:
-        print("=" * 60)
+        print("=" * 64)
         print("  AI-POWERED SECURITY OPERATIONS CENTER")
-        print("  Autonomous SOC Agents | Powered by Claude")
-        print("=" * 60)
+        print(f"  Provider: {provider_name} | Model: {model}")
+        print("  Autonomous SOC Agents")
+        print("=" * 64)
         return
 
     console.print()
     console.print(Panel(
         Text.from_markup(
             "[bold cyan]AI-POWERED SECURITY OPERATIONS CENTER[/bold cyan]\n"
-            "[dim]Autonomous SOC Agents | Powered by Claude claude-sonnet-4-6[/dim]"
+            f"[dim]Provider: [{provider_color}]{provider_name}[/{provider_color}]"
+            f"  |  Model: [bold]{model}[/bold][/dim]\n"
+            "[dim]Autonomous SOC Agents · Triage · Threat Intel · IR · Reporting[/dim]"
         ),
         border_style="cyan",
         padding=(1, 4),
@@ -84,36 +92,48 @@ def print_alert_received(alert):
         table.add_row("Source IP", alert.source_ip)
     if alert.user:
         table.add_row("User", alert.user)
+    if alert.hostname:
+        table.add_row("Hostname", alert.hostname)
     console.print(table)
 
 
 def print_incident_created(incident: Incident):
     if not RICH_AVAILABLE:
-        print(f"\n[INCIDENT CREATED] {incident.id} | Priority: {incident.priority} | Risk: {incident.risk_score}/10")
+        print(
+            f"\n[INCIDENT] {incident.id} | Priority: {incident.priority}"
+            f" | Risk: {incident.risk_score}/10"
+        )
         return
 
     p_color = PRIORITY_COLORS.get(incident.priority, "white")
-    risk_color = "red" if incident.risk_score >= 7 else "yellow" if incident.risk_score >= 4 else "green"
+    risk_color = (
+        "bold red" if incident.risk_score >= 7
+        else "yellow" if incident.risk_score >= 4
+        else "green"
+    )
+    ttp_str = ", ".join(incident.ttps[:6]) if incident.ttps else "None identified"
+    if len(incident.ttps) > 6:
+        ttp_str += f" +{len(incident.ttps) - 6} more"
 
     console.print()
     console.print(Panel(
-        f"[bold]Incident ID:[/bold] {incident.id}\n"
-        f"[bold]Priority:[/bold] [{p_color}]{incident.priority}[/{p_color}]\n"
-        f"[bold]Classification:[/bold] {incident.classification}\n"
-        f"[bold]Risk Score:[/bold] [{risk_color}]{incident.risk_score}/10[/{risk_color}]\n"
-        f"[bold]TTPs:[/bold] {', '.join(incident.ttps) or 'None identified'}\n"
-        f"[bold]IOCs:[/bold] {len(incident.iocs)} indicators\n"
+        f"[bold]Incident ID:[/bold]     {incident.id}\n"
+        f"[bold]Priority:[/bold]        [{p_color}]{incident.priority}[/{p_color}]\n"
+        f"[bold]Classification:[/bold]  {incident.classification}\n"
+        f"[bold]Risk Score:[/bold]      [{risk_color}]{incident.risk_score}/10[/{risk_color}]\n"
+        f"[bold]MITRE TTPs:[/bold]      {ttp_str}\n"
+        f"[bold]IOCs:[/bold]            {len(incident.iocs)} indicator(s)\n"
         f"[bold]Affected Assets:[/bold] {', '.join(incident.affected_assets) or 'Unknown'}",
-        title=f"[bold green]Incident Created[/bold green]",
+        title="[bold green]Incident Created[/bold green]",
         border_style="green",
     ))
 
 
 def print_final_report(incident: Incident):
     if not RICH_AVAILABLE:
-        print("\n" + "=" * 60)
+        print("\n" + "=" * 64)
         print("INCIDENT REPORT")
-        print("=" * 60)
+        print("=" * 64)
         if incident.final_report:
             print(incident.final_report)
         return
@@ -127,8 +147,7 @@ def print_final_report(incident: Incident):
 
 def print_soc_metrics(metrics: dict):
     if not RICH_AVAILABLE:
-        print("\n[SOC METRICS]")
-        print(f"Total Incidents: {metrics.get('total_incidents', 0)}")
+        print(f"\n[SOC METRICS] Total: {metrics.get('total_incidents', 0)}")
         return
 
     console.print()
@@ -140,8 +159,16 @@ def print_soc_metrics(metrics: dict):
 
     table.add_row("Total Incidents", str(metrics.get("total_incidents", 0)))
     table.add_row("Critical (P1)", f"[bold red]{metrics.get('critical_incidents', 0)}[/bold red]")
-    table.add_row("Open/Investigating", f"[yellow]{metrics.get('open_incidents', 0)}[/yellow]")
+    table.add_row("Open / Investigating", f"[yellow]{metrics.get('open_incidents', 0)}[/yellow]")
     table.add_row("Avg Risk Score", f"{metrics.get('average_risk_score', 0)}/10")
+
+    by_priority = metrics.get("by_priority", {})
+    if by_priority:
+        prio_str = "  ".join(
+            f"[{PRIORITY_COLORS.get(p, 'white')}]{p}:{c}[/{PRIORITY_COLORS.get(p, 'white')}]"
+            for p, c in by_priority.items() if c > 0
+        )
+        table.add_row("By Priority", prio_str or "—")
 
     console.print(table)
     console.print()
@@ -151,11 +178,14 @@ def print_false_positive(alert_id: str):
     if not RICH_AVAILABLE:
         print(f"[FALSE POSITIVE] Alert {alert_id} dismissed")
         return
-    console.print(f"  [dim]→[/dim] Alert [bold]{alert_id}[/bold] [green]dismissed as false positive[/green]")
+    console.print(
+        f"  [dim]→[/dim] Alert [bold]{alert_id}[/bold] "
+        "[green]dismissed as false positive[/green]"
+    )
 
 
 def create_status_callback(dashboard_enabled: bool = True):
-    """Create a status callback function for the orchestrator."""
+    """Return a (agent_name, message) → None callback for the orchestrator."""
     def callback(agent_name: str, message: str):
         if dashboard_enabled:
             print_agent_status(agent_name, message)

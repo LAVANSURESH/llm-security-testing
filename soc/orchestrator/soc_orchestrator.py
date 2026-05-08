@@ -1,4 +1,10 @@
-"""SOC Orchestrator — coordinates all agents through the incident response workflow."""
+"""SOC Orchestrator — coordinates all agents through the incident response workflow.
+
+Provider selection (first match wins):
+  --provider gemini    / GEMINI_API_KEY
+  --provider anthropic / ANTHROPIC_API_KEY
+  --provider openai    / OPENAI_API_KEY
+"""
 
 import json
 import os
@@ -7,6 +13,7 @@ from typing import Callable, List, Optional
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
+from soc.agents.base_agent import detect_provider, PROVIDER_DEFAULTS
 from soc.models.alert import Alert
 from soc.models.incident import Incident
 from soc.agents.triage_agent import TriageAgent
@@ -23,17 +30,28 @@ class SOCOrchestrator:
     Alert → Triage → Threat Intel → Log Analysis → IR Planning → Reporting
     """
 
-    def __init__(self, model: str = "claude-sonnet-4-6", api_key: str = None, interactive: bool = False):
-        self.model = model
-        self.api_key = api_key or os.getenv("ANTHROPIC_API_KEY")
+    def __init__(
+        self,
+        model: Optional[str] = None,
+        api_key: Optional[str] = None,
+        provider: Optional[str] = None,
+        interactive: bool = False,
+    ):
+        # Resolve provider and key once; share across all agents
+        self.provider, resolved_key = detect_provider(preferred=provider)
+        self.api_key = api_key or resolved_key
+        self.model = model or PROVIDER_DEFAULTS[self.provider]
         self.interactive = interactive
         self.incidents: List[Incident] = []
 
-        self.triage = TriageAgent(model=model, api_key=self.api_key)
-        self.threat_intel = ThreatIntelAgent(model=model, api_key=self.api_key)
-        self.log_analysis = LogAnalysisAgent(model=model, api_key=self.api_key)
-        self.ir = IncidentResponseAgent(model=model, api_key=self.api_key)
-        self.reporting = ReportingAgent(model=model, api_key=self.api_key)
+        agent_kwargs = dict(model=self.model, api_key=self.api_key, provider=self.provider)
+        self.triage = TriageAgent(**agent_kwargs)
+        self.threat_intel = ThreatIntelAgent(**agent_kwargs)
+        self.log_analysis = LogAnalysisAgent(**agent_kwargs)
+        self.ir = IncidentResponseAgent(**agent_kwargs)
+        self.reporting = ReportingAgent(**agent_kwargs)
+
+    # ── Main pipeline ─────────────────────────────────────────────────────────
 
     def process_alert(
         self,
@@ -43,7 +61,7 @@ class SOCOrchestrator:
     ) -> Optional[Incident]:
         """
         Process a single alert through the full SOC pipeline.
-        Returns an Incident if a true positive, None if false positive.
+        Returns an Incident for true positives, None for false positives.
         """
         log_entries = log_entries or []
 
@@ -65,16 +83,16 @@ class SOCOrchestrator:
         priority = triage_result["priority"]
         _status("TriageAgent", f"Alert {alert.id} → {priority} true positive")
 
-        # In interactive mode, P1 incidents require human confirmation
+        # Interactive mode: P1 incidents require human confirmation
         if self.interactive and priority == "P1":
-            _status("Orchestrator", f"P1 incident detected. Triage summary:\n{triage_result['summary']}")
+            _status("Orchestrator", f"P1 detected. Summary:\n{triage_result['summary']}")
             confirm = input("\nProceed with full investigation? (y/n): ").strip().lower()
             if confirm != "y":
                 _status("Orchestrator", "Investigation skipped by operator")
                 return None
 
         # ── Step 2: Threat Intelligence ─────────────────────────────────────
-        _status("ThreatIntelAgent", f"Running threat intel analysis for alert {alert.id}")
+        _status("ThreatIntelAgent", f"Threat intel analysis for alert {alert.id}")
         threat_intel_result = self.threat_intel.analyze(
             alert,
             status_callback=lambda msg: _status("ThreatIntelAgent", msg),
@@ -95,12 +113,18 @@ class SOCOrchestrator:
             ([alert.source_ip] if alert.source_ip else [])
         ))
 
-        has_exfil = "exfil" in alert.alert_type.lower() or "data" in alert.alert_type.lower()
+        has_exfil = any(kw in alert.alert_type.lower() for kw in ("exfil", "data_exfil"))
         risk_result = calculate_risk_score(
             severity=alert.severity,
             ttp_count=len(threat_intel_result.ttps),
             affected_assets=len(affected_assets),
             has_exfil=has_exfil,
+        )
+
+        intel_summary = (
+            f"Threat: {threat_intel_result.threat_type}. "
+            f"Actor: {threat_intel_result.threat_actor or 'Unknown'}. "
+            f"TTPs: {', '.join(threat_intel_result.ttps) or 'None identified'}."
         )
 
         incident = Incident(
@@ -113,8 +137,10 @@ class SOCOrchestrator:
             affected_assets=affected_assets,
             risk_score=risk_result["risk_score"],
             triage_summary=triage_result["summary"],
-            threat_intel_summary=f"Threat type: {threat_intel_result.threat_type}. Actor: {threat_intel_result.threat_actor or 'Unknown'}. TTPs: {', '.join(threat_intel_result.ttps)}",
-            log_analysis_summary=log_result["summary"][:500] if log_result.get("summary") else None,
+            threat_intel_summary=intel_summary,
+            log_analysis_summary=(
+                log_result["summary"][:500] if log_result.get("summary") else None
+            ),
         )
 
         # ── Step 5: Incident Response Planning ──────────────────────────────
@@ -137,7 +163,7 @@ class SOCOrchestrator:
         incident.status = "contained"
 
         self.incidents.append(incident)
-        _status("Orchestrator", f"Incident {incident.id} processing complete")
+        _status("Orchestrator", f"Incident {incident.id} complete — risk {incident.risk_score}/10")
         return incident
 
     def process_alerts_from_file(
@@ -146,7 +172,7 @@ class SOCOrchestrator:
         log_file: Optional[str] = None,
         status_callback: Callable[[str, str], None] = None,
     ) -> List[Incident]:
-        """Load and process alerts from JSON file."""
+        """Load and process all alerts from a JSON file."""
         with open(alert_file) as f:
             alerts_data = json.load(f)
 
@@ -161,9 +187,17 @@ class SOCOrchestrator:
             incident = self.process_alert(alert, log_entries, status_callback)
             if incident:
                 incidents.append(incident)
-
         return incidents
 
     def get_soc_metrics(self) -> dict:
         """Return SOC KPI metrics for all processed incidents."""
         return self.reporting.generate_soc_metrics(self.incidents)
+
+    @property
+    def provider_label(self) -> str:
+        labels = {
+            "anthropic": f"Anthropic Claude ({self.model})",
+            "openai": f"OpenAI ({self.model})",
+            "gemini": f"Google Gemini ({self.model})",
+        }
+        return labels.get(self.provider, self.provider)

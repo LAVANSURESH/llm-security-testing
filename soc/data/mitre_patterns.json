@@ -1,0 +1,227 @@
+{
+  "tactics": {
+    "TA0001": {"name": "Initial Access", "description": "Gaining a foothold in the network"},
+    "TA0002": {"name": "Execution", "description": "Running malicious code"},
+    "TA0003": {"name": "Persistence", "description": "Maintaining access across restarts"},
+    "TA0004": {"name": "Privilege Escalation", "description": "Gaining higher-level permissions"},
+    "TA0005": {"name": "Defense Evasion", "description": "Avoiding detection"},
+    "TA0006": {"name": "Credential Access", "description": "Stealing credentials"},
+    "TA0007": {"name": "Discovery", "description": "Learning about the environment"},
+    "TA0008": {"name": "Lateral Movement", "description": "Moving through the environment"},
+    "TA0009": {"name": "Collection", "description": "Gathering data of interest"},
+    "TA0010": {"name": "Exfiltration", "description": "Stealing data"},
+    "TA0011": {"name": "Command and Control", "description": "Communicating with compromised systems"},
+    "TA0040": {"name": "Impact", "description": "Manipulate, interrupt, or destroy systems and data"}
+  },
+  "techniques": {
+    "T1059": {
+      "name": "Command and Scripting Interpreter",
+      "tactic": "TA0002",
+      "severity": "high",
+      "detection": "Monitor for unusual script execution, PowerShell, cmd, bash activity",
+      "mitigations": ["Restrict script execution", "Application whitelisting", "AMSI logging"],
+      "alert_types": ["malware", "ransomware", "lateral_movement"]
+    },
+    "T1078": {
+      "name": "Valid Accounts",
+      "tactic": "TA0001",
+      "severity": "high",
+      "detection": "Monitor login events for anomalies, impossible travel, off-hours logins",
+      "mitigations": ["MFA enforcement", "Privileged access management", "Account review"],
+      "alert_types": ["anomalous_login", "lateral_movement", "privilege_escalation"]
+    },
+    "T1110": {
+      "name": "Brute Force",
+      "tactic": "TA0006",
+      "severity": "medium",
+      "detection": "Many failed authentication attempts in short time window",
+      "mitigations": ["Account lockout policy", "Rate limiting", "MFA", "CAPTCHA"],
+      "alert_types": ["brute_force", "credential_stuffing"]
+    },
+    "T1110.001": {
+      "name": "Password Guessing",
+      "tactic": "TA0006",
+      "severity": "medium",
+      "detection": "Sequential password attempts against single account",
+      "mitigations": ["Account lockout", "MFA", "Strong password policy"],
+      "alert_types": ["brute_force"]
+    },
+    "T1110.003": {
+      "name": "Password Spraying",
+      "tactic": "TA0006",
+      "severity": "high",
+      "detection": "Single password tried against many accounts",
+      "mitigations": ["Smart lockout", "Conditional access", "MFA"],
+      "alert_types": ["brute_force"]
+    },
+    "T1190": {
+      "name": "Exploit Public-Facing Application",
+      "tactic": "TA0001",
+      "severity": "critical",
+      "detection": "WAF alerts, anomalous HTTP responses, vulnerability scanner hits",
+      "mitigations": ["Patch management", "WAF", "Input validation", "Network segmentation"],
+      "alert_types": ["sql_injection", "rce", "exploit"]
+    },
+    "T1486": {
+      "name": "Data Encrypted for Impact",
+      "tactic": "TA0040",
+      "severity": "critical",
+      "detection": "Mass file modification, vssadmin delete, ransom note creation",
+      "mitigations": ["Offline backups", "EDR with behavioral detection", "Network segmentation"],
+      "alert_types": ["ransomware"]
+    },
+    "T1041": {
+      "name": "Exfiltration Over C2 Channel",
+      "tactic": "TA0010",
+      "severity": "critical",
+      "detection": "Large outbound data transfers, unusual destinations, DNS tunneling",
+      "mitigations": ["DLP", "Egress filtering", "Proxy inspection", "Network monitoring"],
+      "alert_types": ["data_exfiltration"]
+    },
+    "T1021.002": {
+      "name": "SMB/Windows Admin Shares",
+      "tactic": "TA0008",
+      "severity": "high",
+      "detection": "SMB access to ADMIN$, C$, IPC$ shares from unusual sources",
+      "mitigations": ["Disable admin shares", "Restrict SMB", "Network segmentation"],
+      "alert_types": ["lateral_movement"]
+    },
+    "T1055": {
+      "name": "Process Injection",
+      "tactic": "TA0005",
+      "severity": "high",
+      "detection": "Unusual process memory access, CreateRemoteThread, hollowing",
+      "mitigations": ["EDR with memory protection", "Code integrity policies"],
+      "alert_types": ["malware", "privilege_escalation"]
+    },
+    "T1068": {
+      "name": "Exploitation for Privilege Escalation",
+      "tactic": "TA0004",
+      "severity": "critical",
+      "detection": "Exploit execution, unexpected privilege gain, unusual token access",
+      "mitigations": ["Patch management", "Least privilege", "Exploit mitigations"],
+      "alert_types": ["privilege_escalation"]
+    },
+    "T1003": {
+      "name": "OS Credential Dumping",
+      "tactic": "TA0006",
+      "severity": "critical",
+      "detection": "LSASS memory access, SAM database access, mimikatz signatures",
+      "mitigations": ["Credential Guard", "Protected Users group", "EDR"],
+      "alert_types": ["lateral_movement", "privilege_escalation"]
+    },
+    "T1566.001": {
+      "name": "Spearphishing Attachment",
+      "tactic": "TA0001",
+      "severity": "high",
+      "detection": "Malicious email attachments, macro execution, unusual process spawning from Office",
+      "mitigations": ["Email filtering", "Sandboxing", "Disable macros", "User training"],
+      "alert_types": ["phishing"]
+    },
+    "T1566.002": {
+      "name": "Spearphishing Link",
+      "tactic": "TA0001",
+      "severity": "high",
+      "detection": "User clicks malicious URL, credential harvesting page access",
+      "mitigations": ["URL filtering", "Browser isolation", "MFA", "User training"],
+      "alert_types": ["phishing"]
+    },
+    "T1105": {
+      "name": "Ingress Tool Transfer",
+      "tactic": "TA0011",
+      "severity": "high",
+      "detection": "Unusual downloads, certutil, bitsadmin, PowerShell IEX",
+      "mitigations": ["Application control", "Egress filtering", "Proxy inspection"],
+      "alert_types": ["malware", "lateral_movement"]
+    },
+    "T1562.001": {
+      "name": "Disable or Modify Tools",
+      "tactic": "TA0005",
+      "severity": "high",
+      "detection": "AV/EDR service stopped, Windows Defender disabled, audit log cleared",
+      "mitigations": ["Tamper protection on AV/EDR", "Privileged access management"],
+      "alert_types": ["malware", "ransomware"]
+    },
+    "T1046": {
+      "name": "Network Service Discovery",
+      "tactic": "TA0007",
+      "severity": "low",
+      "detection": "Port scanning, service enumeration, Nmap/Masscan signatures",
+      "mitigations": ["Network segmentation", "Deception technology", "Firewall"],
+      "alert_types": ["reconnaissance"]
+    },
+    "T1071.001": {
+      "name": "Application Layer Protocol: Web Protocols",
+      "tactic": "TA0011",
+      "severity": "high",
+      "detection": "C2 over HTTP/HTTPS, beaconing patterns, jitter analysis",
+      "mitigations": ["TLS inspection", "DNS sinkholing", "Proxy inspection"],
+      "alert_types": ["data_exfiltration", "malware"]
+    },
+    "T1134": {
+      "name": "Access Token Manipulation",
+      "tactic": "TA0004",
+      "severity": "high",
+      "detection": "Token impersonation, CreateProcessWithToken, unusual privilege usage",
+      "mitigations": ["Privileged access workstations", "Credential Guard"],
+      "alert_types": ["privilege_escalation", "lateral_movement"]
+    }
+  },
+  "alert_type_to_ttps": {
+    "brute_force": ["T1110", "T1110.001", "T1110.003"],
+    "ransomware": ["T1486", "T1059", "T1562.001", "T1105"],
+    "lateral_movement": ["T1021.002", "T1078", "T1003", "T1134"],
+    "data_exfiltration": ["T1041", "T1071.001"],
+    "privilege_escalation": ["T1068", "T1055", "T1134", "T1003"],
+    "sql_injection": ["T1190"],
+    "phishing": ["T1566.001", "T1566.002"],
+    "anomalous_login": ["T1078"],
+    "reconnaissance": ["T1046"],
+    "prompt_injection": ["T1190", "T1059"],
+    "malware": ["T1059", "T1105", "T1562.001", "T1055"]
+  },
+  "threat_actors": {
+    "APT28": {
+      "aliases": ["Fancy Bear", "Sofacy", "Pawn Storm"],
+      "origin": "Russia",
+      "ttps": ["T1566.001", "T1078", "T1003", "T1041"],
+      "targets": ["Government", "Military", "Aerospace"],
+      "malware": ["X-Agent", "Sofacy", "JHUHUGIT"]
+    },
+    "APT29": {
+      "aliases": ["Cozy Bear", "The Dukes", "Midnight Blizzard"],
+      "origin": "Russia",
+      "ttps": ["T1566.002", "T1078", "T1021.002", "T1041"],
+      "targets": ["Government", "Think tanks", "Healthcare"],
+      "malware": ["MiniDuke", "CozyDuke", "HAMMERTOSS"]
+    },
+    "APT41": {
+      "aliases": ["Double Dragon", "Winnti", "Barium"],
+      "origin": "China",
+      "ttps": ["T1190", "T1078", "T1059", "T1041"],
+      "targets": ["Healthcare", "Telecom", "Technology", "Gaming"],
+      "malware": ["MESSAGETAP", "POISONPLUG", "Crosswalk"]
+    },
+    "Lazarus": {
+      "aliases": ["Hidden Cobra", "TEMP.Hermit"],
+      "origin": "North Korea",
+      "ttps": ["T1566.001", "T1486", "T1041", "T1059"],
+      "targets": ["Financial", "Cryptocurrency", "Defense"],
+      "malware": ["WannaCry", "AppleJeus", "BLINDINGCAN"]
+    },
+    "LockBit": {
+      "aliases": ["LockBit 3.0", "LockBit Black"],
+      "origin": "Unknown (RaaS)",
+      "ttps": ["T1486", "T1059", "T1562.001", "T1078", "T1021.002"],
+      "targets": ["All sectors", "Healthcare", "Critical Infrastructure"],
+      "malware": ["LockBit ransomware", "StealBit exfiltration tool"]
+    },
+    "FIN7": {
+      "aliases": ["Carbanak", "Navigator Group"],
+      "origin": "Eastern Europe",
+      "ttps": ["T1566.001", "T1059", "T1055", "T1041"],
+      "targets": ["Retail", "Hospitality", "Financial"],
+      "malware": ["Carbanak", "BIRDWATCH", "TERMITE"]
+    }
+  }
+}
