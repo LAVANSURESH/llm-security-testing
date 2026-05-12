@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% from "_macros.html" import score_badge %}
+
+{% block title %}Dashboard · LLM Security Testing{% endblock %}
+{% block page_title %}Security Overview{% endblock %}
+{% block page_actions %}
+  <a class="btn btn--primary" href="/scan">+ New Scan</a>
+{% endblock %}
+
+{% block content %}
+<div class="kpi-grid">
+  <div class="card kpi">
+    <div class="kpi__label">Total runs</div>
+    <div class="kpi__value">{{ kpis.total_runs }}</div>
+    <div class="kpi__hint">All persisted scans</div>
+  </div>
+  <div class="card kpi">
+    <div class="kpi__label">Avg vulnerability score</div>
+    <div class="kpi__value">{{ '%.1f'|format(kpis.avg_score) }}<span class="kpi__unit">/10</span></div>
+    <div class="kpi__hint">Lower is better</div>
+  </div>
+  <div class="card kpi kpi--alert">
+    <div class="kpi__label">Findings (7d)</div>
+    <div class="kpi__value">{{ kpis.critical_7d }}</div>
+    <div class="kpi__hint">Vulnerable detections this week</div>
+  </div>
+  <div class="card kpi">
+    <div class="kpi__label">Last run</div>
+    <div class="kpi__value kpi__value--small">{{ kpis.last_status|capitalize }}</div>
+    <div class="kpi__hint">Most recent scan status</div>
+  </div>
+</div>
+
+<div class="grid grid--2">
+  <div class="card">
+    <div class="card__header">
+      <h2 class="card__title">Score trend</h2>
+      <span class="card__sub">Last {{ trend|length }} runs</span>
+    </div>
+    <div class="card__body">
+      <canvas id="trendChart" height="120"></canvas>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card__header">
+      <h2 class="card__title">Recent runs</h2>
+      <a class="card__action" href="/runs">View all →</a>
+    </div>
+    <div class="card__body card__body--flush">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Run</th>
+            <th>Model</th>
+            <th>Suite</th>
+            <th>Score</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for r in recent_runs %}
+          <tr>
+            <td>
+              <a class="link" href="/runs/{{ r.run_id }}">{{ r.run_id[:18] }}</a>
+              <div class="meta">{{ r.timestamp or '—' }}</div>
+            </td>
+            <td>{{ r.model or '—' }}</td>
+            <td>{{ r.test_suite or '—' }}</td>
+            <td>{{ score_badge(r.overall_score) }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="4" class="empty">No runs yet. Trigger one from <a class="link" href="/scan">New Scan</a>.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const trend = {{ trend|tojson }};
+  if (window.LLMSec && trend.length) {
+    window.LLMSec.renderTrendChart('trendChart', trend);
+  }
+</script>
+{% endblock %}

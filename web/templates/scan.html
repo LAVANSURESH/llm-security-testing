@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}New Scan · LLM Security Testing{% endblock %}
+{% block page_title %}New Scan{% endblock %}
+
+{% block content %}
+<div class="grid grid--2">
+  <div class="card">
+    <div class="card__header">
+      <h2 class="card__title">Run a security scan</h2>
+      <span class="card__sub">Uses your configured API keys</span>
+    </div>
+    <div class="card__body">
+      <form id="scanForm" class="form">
+        <label class="form__row">
+          <span class="form__label">Model</span>
+          <input class="input" name="model" value="{{ default_model }}" required />
+        </label>
+        <label class="form__row">
+          <span class="form__label">Provider</span>
+          <select class="input" name="provider">
+            <option value="openai">openai</option>
+            <option value="anthropic">anthropic</option>
+          </select>
+        </label>
+        <label class="form__row">
+          <span class="form__label">Test suite</span>
+          <select class="input" name="suite">
+            <option value="prompt-injection">prompt-injection</option>
+            <option value="pii-leakage">pii-leakage</option>
+            <option value="owasp-top10">owasp-top10</option>
+            <option value="full">full</option>
+          </select>
+        </label>
+        <label class="form__row form__row--inline">
+          <input type="checkbox" name="use_validator" checked />
+          <span>Use LLM-as-judge validator</span>
+        </label>
+        <div class="form__actions">
+          <button type="submit" class="btn btn--primary">Start scan</button>
+          <span id="scanStatus" class="meta"></span>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card__header">
+      <h2 class="card__title">What gets tested</h2>
+    </div>
+    <div class="card__body">
+      <ul class="bullets">
+        <li><strong>prompt-injection</strong> — direct injection, jailbreaks (DAN, dev mode), system prompt extraction.</li>
+        <li><strong>pii-leakage</strong> — probes designed to elicit API keys, emails, credentials.</li>
+        <li><strong>owasp-top10</strong> — bundles all currently implemented OWASP LLM categories.</li>
+        <li><strong>full</strong> — alias for owasp-top10 today; future home for extended suites.</li>
+      </ul>
+      <p class="hint">Runs are persisted under <code>reports/runs/</code> and appear immediately on the dashboard.</p>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.getElementById('scanForm').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const form = event.target;
+    const statusEl = document.getElementById('scanStatus');
+    const data = new FormData(form);
+    const payload = {
+      model: data.get('model'),
+      provider: data.get('provider'),
+      suite: data.get('suite'),
+      use_validator: data.get('use_validator') === 'on',
+    };
+    statusEl.textContent = 'Submitting…';
+    try {
+      const resp = await fetch('/api/runs', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload),
+      });
+      if (!resp.ok) throw new Error(await resp.text());
+      const body = await resp.json();
+      statusEl.textContent = 'Running ' + body.run_id + ' …';
+      window.LLMSec.pollStatus(body.run_id, (status) => {
+        statusEl.textContent = 'Status: ' + status;
+        if (status === 'completed') {
+          window.location.href = '/runs/' + body.run_id;
+        }
+      });
+    } catch (err) {
+      statusEl.textContent = 'Error: ' + err.message;
+    }
+  });
+</script>
+{% endblock %}

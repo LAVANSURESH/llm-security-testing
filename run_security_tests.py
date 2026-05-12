@@ -13,6 +13,7 @@ from pathlib import Path
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent))
 
+from core import report_store
 from core.injection_tester import PromptInjectionTester
 from core.pii_scanner import PIIScanner
 
@@ -22,11 +23,13 @@ class LLMSecurityTester:
     
     def __init__(self, args):
         self.args = args
+        self.run_id = report_store.new_run_id()
         self.results = {
             "metadata": {
+                "run_id": self.run_id,
                 "timestamp": datetime.now().isoformat(),
                 "model": args.model,
-                "test_suite": args.test_suite
+                "test_suite": args.test_suite,
             },
             "tests": []
         }
@@ -36,6 +39,7 @@ class LLMSecurityTester:
         print("=" * 70)
         print(" LLM SECURITY TESTING FRAMEWORK".center(70))
         print("=" * 70)
+        print(f"Run ID: {self.run_id}")
         print(f"Model: {self.args.model}")
         print(f"Test Suite: {self.args.test_suite}")
         print(f"Timestamp: {self.results['metadata']['timestamp']}")
@@ -196,19 +200,23 @@ class LLMSecurityTester:
             if "prompts_with_leaks" in test:
                 print(f"  PII Leaks Found: {test['prompts_with_leaks']}")
         
+        # Persist run for the dashboard (always, regardless of --output)
+        stored_path = report_store.save_run(self.results)
+        print(f"\n📦 Run persisted: {stored_path.relative_to(Path(__file__).parent)}")
+
         # Save to file if requested
         if self.args.output:
             output_path = self.args.output
-            
+
             if self.args.report == "json":
                 with open(output_path, 'w') as f:
                     json.dump(self.results, f, indent=2)
-            
+
             elif self.args.report == "html":
                 self._save_html_report(output_path)
-            
+
             print(f"\n✅ Report saved to: {output_path}")
-        
+
         print("\n" + "=" * 70)
 
 

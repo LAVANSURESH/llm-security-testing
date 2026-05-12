@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% from "_macros.html" import score_badge %}
+
+{% block title %}Runs · LLM Security Testing{% endblock %}
+{% block page_title %}Runs{% endblock %}
+{% block page_actions %}
+  <a class="btn btn--primary" href="/scan">+ New Scan</a>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card__header card__header--row">
+    <h2 class="card__title">All runs ({{ runs|length }})</h2>
+    <div class="filters">
+      <input type="search" id="runFilter" placeholder="Filter by model or suite…" class="input input--sm" />
+    </div>
+  </div>
+  <div class="card__body card__body--flush">
+    <table class="table" id="runsTable">
+      <thead>
+        <tr>
+          <th data-sort="run_id">Run</th>
+          <th data-sort="timestamp">When</th>
+          <th data-sort="model">Model</th>
+          <th data-sort="test_suite">Suite</th>
+          <th data-sort="total_tests"># Tests</th>
+          <th data-sort="vulnerable_count">Vulnerable</th>
+          <th data-sort="overall_score">Score</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for r in runs %}
+        <tr class="row-clickable" data-href="/runs/{{ r.run_id }}">
+          <td><span class="link">{{ r.run_id[:18] }}</span></td>
+          <td>{{ r.timestamp or '—' }}</td>
+          <td>{{ r.model or '—' }}</td>
+          <td>{{ r.test_suite or '—' }}</td>
+          <td>{{ r.total_tests or 0 }}</td>
+          <td>{{ r.vulnerable_count or 0 }}</td>
+          <td>{{ score_badge(r.overall_score) }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="7" class="empty">No runs yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  if (window.LLMSec) {
+    window.LLMSec.wireTableFilter('runFilter', 'runsTable');
+    window.LLMSec.wireRowLinks('runsTable');
+  }
+</script>
+{% endblock %}

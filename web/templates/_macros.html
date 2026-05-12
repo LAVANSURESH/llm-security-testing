@@ -1,0 +1,39 @@
+{% macro score_badge(value) -%}
+  {% set v = (value or 0)|float %}
+  {% if v >= 7 %}
+    {% set cls = 'badge badge--critical' %}{% set label = 'Critical' %}
+  {% elif v >= 4 %}
+    {% set cls = 'badge badge--high' %}{% set label = 'High' %}
+  {% elif v > 0 %}
+    {% set cls = 'badge badge--medium' %}{% set label = 'Medium' %}
+  {% else %}
+    {% set cls = 'badge badge--low' %}{% set label = 'Safe' %}
+  {% endif %}
+  <span class="{{ cls }}">{{ '%.1f'|format(v) }} · {{ label }}</span>
+{%- endmacro %}
+
+{% macro severity_pill(level) -%}
+  {% set lvl = (level or 'low')|lower %}
+  {% if lvl == 'critical' %}
+    {% set cls = 'pill pill--critical' %}
+  {% elif lvl == 'high' %}
+    {% set cls = 'pill pill--high' %}
+  {% elif lvl == 'medium' %}
+    {% set cls = 'pill pill--medium' %}
+  {% else %}
+    {% set cls = 'pill pill--low' %}
+  {% endif %}
+  <span class="{{ cls }}">{{ lvl|upper }}</span>
+{%- endmacro %}
+
+{% macro verdict_pill(vulnerable) -%}
+  {% if vulnerable %}
+    <span class="pill pill--critical">VULNERABLE</span>
+  {% else %}
+    <span class="pill pill--low">SAFE</span>
+  {% endif %}
+{%- endmacro %}
+
+{% macro format_time(value) -%}
+  {{ value or '—' }}
+{%- endmacro %}

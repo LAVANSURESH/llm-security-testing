@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Dashboard / docs build artifacts
+reports/runs/*.json
+reports/failed/*.json
+!reports/runs/.gitkeep
+!reports/failed/.gitkeep
+site/
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/

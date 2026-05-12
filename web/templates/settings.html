@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Settings · LLM Security Testing{% endblock %}
+{% block page_title %}Settings{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card__header">
+    <h2 class="card__title">Environment</h2>
+    <span class="card__sub">Read-only · update via your shell or .env file</span>
+  </div>
+  <div class="card__body">
+    <table class="table">
+      <thead>
+        <tr><th>Variable</th><th>Status</th><th>Value</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="mono">OPENAI_API_KEY</td>
+          <td>
+            {% if env_state.OPENAI_API_KEY %}
+              <span class="pill pill--low">set</span>
+            {% else %}
+              <span class="pill pill--critical">missing</span>
+            {% endif %}
+          </td>
+          <td class="mono">{% if env_state.OPENAI_API_KEY %}••••••{% else %}—{% endif %}</td>
+        </tr>
+        <tr>
+          <td class="mono">ANTHROPIC_API_KEY</td>
+          <td>
+            {% if env_state.ANTHROPIC_API_KEY %}
+              <span class="pill pill--low">set</span>
+            {% else %}
+              <span class="pill pill--high">missing</span>
+            {% endif %}
+          </td>
+          <td class="mono">{% if env_state.ANTHROPIC_API_KEY %}••••••{% else %}—{% endif %}</td>
+        </tr>
+        <tr>
+          <td class="mono">DEFAULT_MODEL</td>
+          <td><span class="pill pill--low">set</span></td>
+          <td class="mono">{{ env_state.DEFAULT_MODEL }}</td>
+        </tr>
+        <tr>
+          <td class="mono">TARGET_API_URL</td>
+          <td>
+            {% if env_state.TARGET_API_URL %}
+              <span class="pill pill--low">set</span>
+            {% else %}
+              <span class="pill pill--medium">unset</span>
+            {% endif %}
+          </td>
+          <td class="mono">{{ env_state.TARGET_API_URL or '—' }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card__header"><h2 class="card__title">Security note</h2></div>
+  <div class="card__body">
+    <p>This dashboard ships without authentication. It is intended to run on a
+    trusted localhost. Never expose the port to the public internet.</p>
+  </div>
+</div>
+{% endblock %}

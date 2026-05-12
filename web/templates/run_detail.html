@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% from "_macros.html" import score_badge, verdict_pill %}
+
+{% block title %}Run {{ run.metadata.run_id }} · LLM Security Testing{% endblock %}
+{% block page_title %}Run detail{% endblock %}
+{% block page_actions %}
+  <a class="btn btn--ghost" href="/runs">← Back to runs</a>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card__header card__header--row">
+    <div>
+      <h2 class="card__title">{{ run.metadata.run_id }}</h2>
+      <div class="meta">
+        {{ run.metadata.timestamp or '—' }} · Model
+        <strong>{{ run.metadata.model or '—' }}</strong> · Suite
+        <strong>{{ run.metadata.test_suite or '—' }}</strong>
+      </div>
+    </div>
+    <div>{{ score_badge(summary.overall_score) }}</div>
+  </div>
+  <div class="card__body">
+    <div class="summary-grid">
+      <div><div class="summary__label">Total tests</div><div class="summary__value">{{ summary.total_tests }}</div></div>
+      <div><div class="summary__label">Vulnerable</div><div class="summary__value summary__value--alert">{{ summary.vulnerable_count }}</div></div>
+      <div><div class="summary__label">Risk</div><div class="summary__value">{{ summary.risk_level }}</div></div>
+      <div><div class="summary__label">Categories</div><div class="summary__value">{{ summary.categories|length }}</div></div>
+    </div>
+  </div>
+</div>
+
+{% for test in run.tests %}
+<div class="card category-card">
+  <div class="card__header card__header--row">
+    <div>
+      <h3 class="card__title">{{ test.test_type|replace('_',' ')|title }}</h3>
+      <div class="meta">
+        {{ test.get('total_payloads') or test.get('total_scenarios') or test.get('total_attempts') or test.get('total_prompts') or (test.details|length if test.details else 0) }}
+        tests ·
+        {{ test.get('successful_attacks') or test.get('successful_jailbreaks') or test.get('prompts_with_leaks') or 0 }}
+        vulnerable
+      </div>
+    </div>
+    {% if test.vulnerability_score is defined %}
+      <div>{{ score_badge(test.vulnerability_score) }}</div>
+    {% endif %}
+  </div>
+  <div class="card__body card__body--flush">
+    {% if test.details %}
+    <details class="details-list">
+      <summary>Show {{ test.details|length }} attempts</summary>
+      <table class="table table--detail">
+        <thead>
+          <tr>
+            <th>Payload</th>
+            <th>Response</th>
+            <th>Verdict</th>
+            <th>Reasoning</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for d in test.details %}
+          <tr>
+            <td class="mono">{{ d.payload or d.prompt or '—' }}</td>
+            <td class="mono">{{ d.response or d.error or '—' }}</td>
+            <td>{{ verdict_pill(d.vulnerable or d.prompt_leaked) }}</td>
+            <td class="mono">{{ d.validator_reasoning or d.findings or '' }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </details>
+    {% else %}
+      <div class="empty">No per-test details captured.</div>
+    {% endif %}
+  </div>
+</div>
+{% endfor %}
+
+<details class="card raw-payload">
+  <summary>Raw JSON</summary>
+  <pre class="code">{{ run|tojson(indent=2) }}</pre>
+</details>
+{% endblock %}
