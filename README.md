@@ -1,10 +1,5 @@
 # LLM Security Testing Framework
 
-**OWASP LLM Top 10 Automated Security Testing for AI Applications**
-
-[![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/)
-[![OWASP](https://img.shields.io/badge/OWASP-LLM_Top_10-red.svg)](https://owasp.org/www-project-top-10-for-large-language-model-applications/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
 
 ## 🎯 Overview
 
@@ -396,7 +391,6 @@ jobs:
 - [ ] Fine-tuned hallucination detector (custom model)
 - [ ] Multi-language support (non-English attacks)
 - [ ] Automated remediation suggestions
-- [ ] Integration with SIEM tools (Splunk, ELK)
 
 ---
 
@@ -418,20 +412,6 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
 - [Anthropic's Prompt Injection Guide](https://docs.anthropic.com/claude/docs/prompt-injection)
 - [OpenAI Safety Best Practices](https://platform.openai.com/docs/guides/safety-best-practices)
 - [NCC Group - LLM Security Research](https://research.nccgroup.com/)
-
----
-
-## 📝 License
-
-MIT License - See [LICENSE](./LICENSE) for details.
-
----
-
-## 🙏 Acknowledgments
-
-- OWASP Foundation for LLM security guidelines
-- OpenAI and Anthropic for API access
-- Security research community
 
 ---
 
